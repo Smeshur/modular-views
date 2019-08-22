@@ -21,7 +21,6 @@ class ModularView(View):
             print(module, method, request.method)
             result = getattr(module, method)(request, self, *args, **kwargs)
             if result:
-                print('HAS RESULT')
                 return result
 
     def dispatch(self, request, *args, **kwargs):
@@ -35,7 +34,6 @@ class ModularView(View):
         return result
 
     def post(self, request, *args, **kwargs):
-        print('POST')
         result = self.handle_modules(request, 'post', self.modules, *args, **kwargs)
         return result
 

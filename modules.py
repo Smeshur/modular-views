@@ -41,7 +41,6 @@ class ViewModule(object):
         return kwargs.get(val, None) or request.GET.get(val, None) or request.POST.get(val, None)
 
     def process_callback(self, request, view, value, *args, **kwargs):
-        print(value)
         if callable(value) and not isinstance(value, type):
             return value(request, view, *args, **kwargs)
         elif isinstance(value, type):
@@ -51,7 +50,6 @@ class ViewModule(object):
             if hasattr(self, 'callback_locations'):
                 lookup_locations += self.callback_locations
             for src in lookup_locations:
-                print(src, value, getattr(src, value, None))
                 attr = getattr(src, value)
 
                 if callable(attr):
@@ -100,7 +98,6 @@ class LoadModel(ViewModule):
 
     def delete(self, request, view, *args, **kwargs):
         if self.delete_endpoint:
-            print('SAMPLE', view.models[self.name].id)
             view.models[self.name].delete()
             return self.process_callback(request, view, self.delete_endpoint, *args, **kwargs)
 
@@ -228,7 +225,6 @@ class LoadForm(ViewModule):
         self.callback = save_success_callback
 
     def post(self, request, view, *args, **kwargs):
-        print(view.forms[self.name].is_valid(), self.callback, view.forms[self.name].errors)
         if view.forms[self.name].is_valid():
             if self.handle_save:
                 view.forms[self.name].save()
@@ -241,7 +237,6 @@ class LoadForm(ViewModule):
         # since init is only called when view class is built, we need to copy these
 
         Form = self.process_callback(request, view, self.FormClass)
-        print(' =========== ', Form)
         self.is_formset = issubclass(Form, BaseFormSet) and not issubclass(Form, BaseInlineFormSet) # is this good enough?
 
         if not hasattr(view, 'forms'):
@@ -329,7 +324,6 @@ class AjaxModule(ViewModule):
                     if result:
                         return result
                     result = view.handle_modules(request, request.method.lower(), modules, *args, **nkwargs)
-                    print(result)
                     if result:
                         return result
 
