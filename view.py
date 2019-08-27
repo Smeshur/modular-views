@@ -4,10 +4,9 @@ from django.template.loader import render_to_string
 from django.forms import BaseFormSet, BaseInlineFormSet
 from copy import deepcopy, copy
 from importlib import import_module
+from django.conf import settings
 
 class ModularView(View):
-    url = None # (url, name)
-    title = 'DavisMill'
     modules = [
         
     ]
@@ -16,18 +15,21 @@ class ModularView(View):
         super(ModularView, self).__init__(*args, **kwargs)
         self.template_context = {'view': self}
 
-    def handle_modules(self, request, method, modules, *args, **kwargs): # helper method to run all modules for a given method
+    # helper method to run all modules for a given method
+    def handle_modules(self, request, method, modules, *args, **kwargs): 
         for module in modules:
-            print(module, method, request.method)
             result = getattr(module, method)(request, self, *args, **kwargs)
             if result:
                 return result
 
+    # dispatch does not require a response, but will return one if given
     def dispatch(self, request, *args, **kwargs):
         result = self.handle_modules(request, 'dispatch', self.modules, *args, **kwargs)
         if result:
             return result
         return super(ModularView, self).dispatch(request, *args, **kwargs)
+
+    # get post put and delete all expect a response
 
     def get(self, request, *args, **kwargs):
         result = self.handle_modules(request, 'get', self.modules, *args, **kwargs)
@@ -45,7 +47,5 @@ class ModularView(View):
         result = self.handle_modules(request, 'put', self.modules, *args, **kwargs)
         return result
 
-    @staticmethod
-    def factory(modules, title='DavisMill'):
-        """ this should be capable of creating a modular view directly in a urls.py File """
-        return type('ModuleView', (ModularView,), {'modules': modules}).as_view()
+
+# we should create a Factory Method for creating ModularViews

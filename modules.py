@@ -5,6 +5,8 @@ from copy import deepcopy, copy
 from importlib import import_module
 import re
 
+# perhaps we can make it so you use 'callback' to use a callback to retrieve the value as "process_callback" does, and by default use the raw value?
+# I personally tend to use callbacks more than raw values, but in a general sense maybe having raw be the default makes more sense? I'm not sure.
 def raw(val):
     """ Used to return a raw value to callback parameters"""
     return lambda *a,**k: val
@@ -41,22 +43,23 @@ class ViewModule(object):
         return kwargs.get(val, None) or request.GET.get(val, None) or request.POST.get(val, None)
 
     def process_callback(self, request, view, value, *args, **kwargs):
-        if callable(value) and not isinstance(value, type):
+        if callable(value) and not isinstance(value, type): # if is callable, but not a type, call it and return result
             return value(request, view, *args, **kwargs)
-        elif isinstance(value, type):
+        elif isinstance(value, type): # if value is a type, return the type (not an instance of the type)
             return value
-        elif value:
+        elif value: # if it's a value, we look it up against our callback locations
             lookup_locations = [view, self]
             if hasattr(self, 'callback_locations'):
                 lookup_locations += self.callback_locations
             for src in lookup_locations:
-                attr = getattr(src, value)
+                if hasattr(src, value): # only return if the attribute exists. we can't use "if attr" because we still want to return None or False if the attribute exists
+                    attr = getattr(src, value)
 
-                if callable(attr):
-                    return attr(request, view, *args, **kwargs) if hasattr(src, value) else None
-                else:
-                    return attr
-                
+                    if callable(attr):
+                        return attr(request, view, *args, **kwargs)
+                    else:
+                        return attr
+            return None                
 
 
 class LoadModel(ViewModule):
@@ -71,7 +74,7 @@ class LoadModel(ViewModule):
 
     def get_lookup(self, request, view, *args, **kwargs):
         # return default lookup dictionary for object using lookup_parameters first check url, then 
-        return { k: self.lookup_value(request, view, v, *args, **kwargs) for k,v in self.lookup_parameters.iteritems() }
+        return { k: self.lookup_value(request, view, v, *args, **kwargs) for k,v in self.lookup_parameters.items() }
 
     def load_object(self, request, view, *args, **kwargs):
         # we only want to return an object if the lookup_parameters permit
@@ -102,6 +105,8 @@ class LoadModel(ViewModule):
             return self.process_callback(request, view, self.delete_endpoint, *args, **kwargs)
 
 class LoadModelList(ViewModule):
+    """ Provides a QuerySet of models """
+
     def __init__(self, Model, name=None, filter_parameters={}, exclude_parameters={}, filter_raw={}, exclude_raw={}):
         self.Model = Model
         self.name = name or Model.__name__
@@ -112,17 +117,17 @@ class LoadModelList(ViewModule):
 
     def get_filter(self, request, view, *args, **kwargs):
         # return default filter dictionary for objects using include_parameters
-        result = { k: self.lookup_value(request, view, v, *args, **kwargs) for k,v in self.filter_parameters.iteritems() }
+        result = { k: self.lookup_value(request, view, v, *args, **kwargs) for k,v in self.filter_parameters.items() }
 
-        for k,v in self.filter_raw.iteritems():
+        for k,v in self.filter_raw.items():
             result[k] = v
 
         return result
 
     def get_exclude(self, request, view, *args, **kwargs):
-        result = { k: self.lookup_value(request, view, v, *args, **kwargs) for k,v in self.exclude_parameters.iteritems() }
+        result = { k: self.lookup_value(request, view, v, *args, **kwargs) for k,v in self.exclude_parameters.items() }
 
-        for k,v in self.exclude_raw.iteritems():
+        for k,v in self.exclude_raw.items():
             result[k] = v
 
         return result
@@ -152,37 +157,19 @@ class FilterModelList(ViewModule):
         view.models[self.name] = self.process_callback(request, view, self.filter, view.models[self.name], *args, **kwargs) 
         view.template_context[self.name] = view.models[self.name]
 
-class Breadcrumb(ViewModule):
-    """ creates a breadcrumb entry """
 
-    def __init__(self, name, url):
-        self.name = name
-        self.url = url
-
-    def dispatch(self, request, view, *args, **kwargs):
-        if not hasattr(view, 'breadcrumbs'):
-            view.breadcrumbs = []
-
-        if callable(self.name):
-            name = self.name(view, request)
-        else:
-            name = self.name
-
-        if callable(self.url):
-            url = self.url(view, request)
-        else:
-            url = self.url
-
-        view.breadcrumbs.append((name, url))
-        view.template_context['breadcrumbs'] = view.breadcrumbs
 
 class RenderTemplate(ViewModule):
     """ Generic template rendering module """
-    def __init__(self, get_template, post_template=None):
+    def __init__(self, get_template, post_template=None, callback=False):
         self.get_template = get_template
         self.post_template = post_template or get_template
+        self.callback = callback
 
     def get(self, request, view, *args, **kwargs):
+        if callback:
+            template = self.process_callback(request, view, self.get_template, *args, **kwargs)
+            return render(request, template, view.template_context)
         return render(request, self.get_template, view.template_context)
 
     def post(self, request, view, *args, **kwargs):
@@ -307,14 +294,14 @@ class AjaxModule(ViewModule):
         Accepts a list of (url, [modules])
         Urls can use regex, however the URL entry in urls.py will need to have a regex formula that matches all possible ajax urls.
         
-        since this is attached to the same view, you have access to anything generated by view modules, thus reducing repetetive code.
+        since this is attached to the same view, you have access to anything generated by view modules, which should help reduce repetetive code.
     """
 
     def __init__(self, endpoints, *args, **kwargs):
         self.endpoints = endpoints
 
 
-    def dispatch(self, request, view, *args, **kwargs): # this is kinda gross, but it's functional (READABILITY COUNTS!)
+    def dispatch(self, request, view, *args, **kwargs):
         if request.is_ajax():
             for url, modules in self.endpoints:
                 sr = re.search(url, request.path)
@@ -323,15 +310,21 @@ class AjaxModule(ViewModule):
                     result = view.handle_modules(request, 'dispatch', modules, *args, **nkwargs)
                     if result:
                         return result
-                    result = view.handle_modules(request, request.method.lower(), modules, *args, **nkwargs)
+                    result = view.handle_modules(request, request.method.lower(), modules, *args, **nkwargs) # call modules for given request method
                     if result:
                         return result
 
 
 class ModuleContainer(ViewModule):
+    """
+        This is meant to be inherited from, provides a simple way to reuse a set of Modules.
+
+        ModuleContainer automatically includes itself in callback_locations
+    """
+
     modules = []
 
-    def dispatch(self, request, view, *args, **kwargs): # this is kinda gross, but it's functional (READABILITY COUNTS!)
+    def dispatch(self, request, view, *args, **kwargs):
         result = view.handle_modules(request, 'dispatch', self.modules, *args, **kwargs)
         if result:
             return result
@@ -362,7 +355,7 @@ class ConditionalModules(ViewModule):
             return view.handle_modules(request, 'put', self.modules, *args, **kwargs)
 
     def dispatch(self, request, view, *args, **kwargs):
-        # cache if condition is valid
+        # store result of condition check
         self._passes_condition = self.process_callback(request, view, self.condition, *args, **kwargs)
 
         # only execute if valid
@@ -375,6 +368,10 @@ class ConditionalModules(ViewModule):
 
 
 class ViewProperty(ViewModule):
+    """
+        Provides a simple way to pass information to the template context using process_callback.
+    """
+
     def __init__(self, name, value):
        self.name = name
        self.value = value
