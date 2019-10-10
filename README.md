@@ -69,7 +69,11 @@ class HomePage(ModularView):
   ]
 ```
 
-this will simply render the given template. A less primitive approach is using Layouts
+This will simply render the given template. 
+
+The context of the template is dict stored under `view.template_context`
+
+A less primitive approach is using Layouts
 
 *we need to explain how the Layout system works*
 
@@ -93,6 +97,6 @@ class BlogPost(ModularView):
 ```
 The first parameter being the model class, the second is the name used to reference the model, the third being is what's used to lookup the correct model.
 
-The example is the equivalent of `Post.objects.get(id=post_id)` where post_id can come from either a GET or POST parameter, or a parameter in the url.
+The example is the equivalent of `Post.objects.get(id=post_id)` where `post_id` is aquired from the `lookup_value` function above.
 
-You can access the model as **post** in any of your templates
+All loaded models are stored on the view under `view.models[model_name]` and passed to the template context as `view.template_context[model_name]`.
