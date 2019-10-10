@@ -22,6 +22,33 @@ class HomePage(ModularView):
     
   ]
 ```
+All modules extend the `ViewModule` class. The `ViewModule`s are invoked in the order they are loaded
+
+```python
+class ViewModule(object):
+    """
+        a view module contains logic for a specific part of a view
+        ex. Form, Load Model, Etc.
+    """
+
+    def get(self, request, view, *args, **kwargs):
+        pass
+
+    def post(self, request, view, *args, **kwargs):
+        pass
+
+    def delete(self, request, view, *args, **kwargs):
+        pass
+
+    def put(self, request, view, *args, **kwargs):
+        pass
+
+    def dispatch(self, request, view, *args, **kwargs):
+        pass
+``
+
+View -> `dispatch`
+  Run the
 
 The `modules` property contains all of the modules this view will use. Let's look at some basic ones.
 
