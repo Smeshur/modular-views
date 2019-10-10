@@ -47,9 +47,9 @@ class ViewModule(object):
         pass
 ```
 
-Upon Entry, the view will call it's `dispatch` method. This will invoke the dispatch method on all `ViewModule`s
+Upon Entry, the view will call it's `dispatch` method. This will invoke the dispatch method on all `ViewModule`s.
 Then, the view will call it's `get`, `post`, `put`, or `delete` method depending on the method used for the request.
- This will invoke the same method on each view module.
+This will invoke the same method on each view module.
 
 View Modules are always invoked in the order they are listed.
 
@@ -57,7 +57,7 @@ The first module to return a `Response` will be sent to the client. This can hap
 
 Both `ModularView` and `ViewModule` classes have a `lookup_value` method.
 This will check if the given value exists in the request's GET or POST data, as well is url parameters.
-If the value to lookup is `callable` it will be called with the parameters of `request, view, *args, **kwargs`
+If the value to lookup is `callable` it will be called with the parameters of `request, view, *args, **kwargs` where
 `*args, **kwargs` are passed through from `dispatch`
 
 The `modules` property contains all of the modules the view will use. Let's look at some basic ones.
