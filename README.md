@@ -45,7 +45,7 @@ class ViewModule(object):
 
     def dispatch(self, request, view, *args, **kwargs):
         pass
-``
+```
 
 View -> `dispatch`
   Run the
