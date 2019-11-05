@@ -56,7 +56,7 @@ View Modules are always invoked in the order they are listed.
 The first module to return a `Response` will be sent to the client. This can happen on either `dispatch` or the given request methods function.
 
 Both `ModularView` and `ViewModule` classes have a `lookup_value` method.
-This will check if the given value exists in the request's GET or POST data, as well is url parameters.
+This will check if the given value exists in the request's GET, POST, or url parameters.
 If the value to lookup is `callable` it will be called with the parameters of `request, view, *args, **kwargs` where
 `*args, **kwargs` are passed through from `dispatch`
 
