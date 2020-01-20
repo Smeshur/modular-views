@@ -1,10 +1,4 @@
 from django.views import View
-from django.shortcuts import render
-from django.template.loader import render_to_string
-from django.forms import BaseFormSet, BaseInlineFormSet
-from copy import deepcopy, copy
-from importlib import import_module
-from django.conf import settings
 
 class ModularView(View):
     modules = [
