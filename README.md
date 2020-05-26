@@ -22,7 +22,7 @@ class HomePage(ModularView):
     
   ]
 ```
-All modules extend the `ViewModule` class. The `ViewModule`s are invoked in the order they are loaded
+All modules extend the `ViewModule` class. The `ViewModule`s are invoked in the order they are created
 
 ```python
 class ViewModule(object):
