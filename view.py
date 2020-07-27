@@ -40,6 +40,13 @@ class ModularView(View):
     def put(self, request, *args, **kwargs):
         result = self.handle_modules(request, 'put', self.modules, *args, **kwargs)
         return result
+    
+    # copy of lookup_value on view object
+    def lookup_value(self, request, val, *args, **kwargs):
+        """
+            looks for a url or query parameter with the given name
+        """
+        if callable(val):
+            return val(request, self, *args, **kwargs)
 
-
-# we should create a Factory Method for creating ModularViews
+        return kwargs.get(val, None) or request.GET.get(val, None) or request.POST.get(val, None)
